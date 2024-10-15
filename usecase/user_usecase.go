@@ -71,7 +71,12 @@ type UserUsecase struct {
 
 // NewUserUsecase creates a new UserUsecase
 func NewUserUsecase(repo UserRepository, config *Config, logger *log.Logger, constants *Constants) *UserUsecase {
-	return &UserUsecase{UserRepo: repo, Config: config, Logger: logger, Constants: constants}
+	return &UserUsecase{
+		UserRepo:  repo,
+		Config:    config,
+		Logger:    logger,
+		Constants: constants,
+	}
 }
 
 // GetUserByID retrieves user data by ID
