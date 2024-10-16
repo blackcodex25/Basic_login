@@ -7,3 +7,5 @@ type User struct {
 	Role     string // เช่น "admin", "user", "guest"
 	ID       int64
 }
+
+//  effectively

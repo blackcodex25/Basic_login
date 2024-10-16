@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"sync"
+	"time"
 )
 
 // Error messages
@@ -18,30 +19,34 @@ type InMemoryUserRepository struct {
 	mu            sync.RWMutex
 	userIDCounter int64
 	users         map[string]*domain.User
-	userIDs       map[int64]*domain.User // New map for quick ID lookups
+	userIDs       map[int64]*domain.User
+	chatRoom      *domain.ChatRoom
 }
 
-// NewInMemoryUserRepository creates a new InMemoryUserRepository
-func NewInMemoryUserRepository() *InMemoryUserRepository {
-	return &InMemoryUserRepository{
-		users:   make(map[string]*domain.User),
-		userIDs: make(map[int64]*domain.User), // Initialize ID map
+// NewInMemoryUserRepository creates a new InMemoryUserRepository with a specified chat room buffer size.
+func NewInMemoryUserRepository(bufferSize int) *InMemoryUserRepository {
+	repo := &InMemoryUserRepository{
+		users:    make(map[string]*domain.User),
+		userIDs:  make(map[int64]*domain.User),
+		chatRoom: domain.NewChatRoom(bufferSize),
 	}
+	go repo.chatRoom.Run()
+	return repo
 }
 
-// GetByID retrieves a user by ID
+// GetByID retrieves a user by their ID.
 func (repo *InMemoryUserRepository) GetByID(id int64) (*domain.User, error) {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
 
-	user, exists := repo.userIDs[id] // Fast lookup by ID
+	user, exists := repo.userIDs[id]
 	if !exists {
 		return nil, ErrUserNotFound
 	}
 	return user, nil
 }
 
-// Create adds a new user to the repository
+// Create adds a new user to the repository.
 func (repo *InMemoryUserRepository) Create(user *domain.User) error {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
@@ -53,12 +58,14 @@ func (repo *InMemoryUserRepository) Create(user *domain.User) error {
 	repo.userIDCounter++
 	user.ID = repo.userIDCounter
 	repo.users[user.Username] = user
-	repo.userIDs[user.ID] = user // Maintain ID mapping
+	repo.userIDs[user.ID] = user
 	log.Printf("Created user: %s with ID: %d", user.Username, user.ID)
+
+	repo.chatRoom.Join <- user.Username
 	return nil
 }
 
-// GetByUsername retrieves a user by username
+// GetByUsername retrieves a user by their username.
 func (repo *InMemoryUserRepository) GetByUsername(username string) (*domain.User, error) {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
@@ -70,7 +77,7 @@ func (repo *InMemoryUserRepository) GetByUsername(username string) (*domain.User
 	return user, nil
 }
 
-// GetAll retrieves all users
+// GetAll retrieves all users from the repository.
 func (repo *InMemoryUserRepository) GetAll() ([]*domain.User, error) {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
@@ -82,7 +89,7 @@ func (repo *InMemoryUserRepository) GetAll() ([]*domain.User, error) {
 	return users, nil
 }
 
-// Update modifies an existing user
+// Update modifies an existing user.
 func (repo *InMemoryUserRepository) Update(user *domain.User) error {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
@@ -92,7 +99,22 @@ func (repo *InMemoryUserRepository) Update(user *domain.User) error {
 	}
 
 	repo.users[user.Username] = user
-	repo.userIDs[user.ID] = user // Ensure the ID mapping is updated
+	repo.userIDs[user.ID] = user
 	log.Printf("Updated user: %s", user.Username)
 	return nil
+}
+
+// SendChatMessage sends a chat message to the chat room.
+func (repo *InMemoryUserRepository) SendChatMessage(sender, message string) {
+	chatMessage := domain.ChatMessage{
+		Sender:    sender,
+		Message:   message,
+		TimeStamp: time.Now(),
+	}
+	repo.chatRoom.Messages <- chatMessage
+}
+
+// LeaveChat removes a user from the chat room.
+func (repo *InMemoryUserRepository) LeaveChat(username string) {
+	repo.chatRoom.Leave <- username
 }

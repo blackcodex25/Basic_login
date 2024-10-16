@@ -59,6 +59,8 @@ type UserRepository interface {
 	GetByUsername(username string) (*domain.User, error)
 	GetAll() ([]*domain.User, error)
 	Update(user *domain.User) error
+	SendChatMessage(sender, message string)
+	LeaveChat(username string)
 }
 
 // UserUsecase contains methods for user operations
@@ -87,6 +89,16 @@ func (u *UserUsecase) GetUserByID(id int64) (*domain.User, error) {
 // UpdateUser updates user data
 func (u *UserUsecase) Update(user *domain.User) error {
 	return u.UserRepo.Update(user)
+}
+
+// SendChatMessage sends a chat message
+func (u *UserUsecase) SendChatMessage(sender, message string) {
+	u.UserRepo.SendChatMessage(sender, message)
+}
+
+// LeaveChat removes user from chat
+func (u *UserUsecase) LeaveChat(username string) {
+	u.UserRepo.LeaveChat(username)
 }
 
 // CreateUser creates a new user
