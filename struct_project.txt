@@ -1,3 +1,4 @@
+// Old Project Structure
 /project
 │
 ├── /cmd                -> ไฟล์หลักที่เรียกโปรแกรม (main.go)
