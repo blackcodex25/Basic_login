@@ -30,7 +30,7 @@ func StartChat(usecase *usecase.UserUsecase) {
 		}
 
 		usecase.SendChatMessage(username, message)
-		fmt.Printf("[%s] %s: %s\n", time.Now().Format(time.RFC3339), username, message)
+		fmt.Printf("[%s] %s: %s\n", time.Now().Format("2006-01-02 15:04:05"), username, message)
 
 		if Confirm(infrastructure.PromptLeaveChat) {
 			usecase.LeaveChat(username)
